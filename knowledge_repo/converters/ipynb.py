@@ -17,6 +17,13 @@ var element = $('#{{ div_id }}');
 </div>
 {%- endblock -%}
 
+{%- block any_cell -%}
+{%- if cell['metadata'].get('slideshow', {}).get('slide_type', '') == 'notes' -%}
+{%- else -%}
+{{ super () }}
+{%- endif -%}
+{%- endblock any_cell -%}
+
 {%- block input -%}
 {%- if cell['metadata'].get('slideshow',{}).get('slide_type','') == 'skip' -%}
 {%- else %}
@@ -25,6 +32,10 @@ var element = $('#{{ div_id }}');
 ```
 {%- endif %}
 {%- endblock input -%}
+
+
+
+
 
 {%- block data_priority scoped %}
 {{ super() }}
