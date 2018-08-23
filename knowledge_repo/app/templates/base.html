@@ -89,10 +89,12 @@
               </div>
             </form>
 
+            {% if current_user.identifier in current_repo.config.editors %}
             <!-- "Write a Post" button -->
             <a href="/create" class="btn btn-primary navbar-button">
               Write a Post!
             </a>
+            {% endif %}
 
             <!-- Drop down menu to surface less used links on large screens -->
             <ul class="nav navbar-nav navbar-right visible-sm-block visible-md-block visible-lg-block">
