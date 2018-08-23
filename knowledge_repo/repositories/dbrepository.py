@@ -65,6 +65,7 @@ class DbKnowledgeRepository(KnowledgeRepository):
 
     @property
     def revision(self):
+        self.engine.dispose()
         result = self.session.query(func.max(self.PostRef.updated_at)).first()
         self.session.commit()
         return str(result[0])
