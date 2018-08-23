@@ -217,6 +217,10 @@ class KnowledgeFlask(Flask):
                         version_revision=version_revision,
                         last_index=time_since_index(human_readable=True),
                         last_index_check=time_since_index_check(human_readable=True))
+            
+        @self.context_processor
+        def pass_vars_to_all_templates():
+            return dict(current_repo=current_repo)
 
         @self.template_global()
         def modify_query(**new_values):
