@@ -264,6 +264,13 @@ INDEXING_UPDATES_REPOSITORIES_WITHOUT_LOCK = True
 # view the post with a direct link.
 INDEXING_ENABLED = True
 
+# In some cases we may want to manually index posts without reindexing
+# the posts that are already up to date.  Setting this setting to True
+# and INDEXING_ENABLED to False will allow one-time indexing without
+# starting index timers.
+MANUAL_INDEX = False
+
+
 # ---------------------------------------------------
 # Flask Mail Configuration
 # Refer to https://pythonhosted.org/flask-mail/
