@@ -26,6 +26,8 @@ def from_request_get_feed_params(request):
 
     feed_params["filters"] = request.args.get('filters')
     feed_params["authors"] = request.args.get('authors')
+    feed_params["tags"] = request.args.get('tags')
+    feed_params["post_paths"] = request.args.get('post_paths')
     feed_params["start"] = int(request.args.get('start', 0))
     feed_params["results"] = int(request.args.get('results', 10))
     feed_params["sort_by"] = inflection.underscore(
@@ -42,3 +44,20 @@ def from_request_get_feed_params(request):
     if user_obj:
         feed_params["subscriptions"] = user_obj.subscriptions
     return feed_params
+
+def from_request_get_group_params(request):
+    """Given the request, return an object that contains the parameters.
+
+    :param request: The request obj
+    :type request: Flask request
+    :return: Select parameters passed in through headers or the url
+    :rtype: object
+    """
+    group_params = {}
+
+    group_params["filters"] = request.args.get('filters', '')
+    group_params["sort_by"] = request.args.get('sort_by', 'alpha')
+    group_params["sort_desc"] = not bool(request.args.get('sort_asc', ''))
+    group_params["group_by"] = request.args.get('group_by', 'folder')
+
+    return group_params

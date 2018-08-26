@@ -16,9 +16,9 @@ from sqlalchemy import case, desc
 
 from .. import permissions
 from ..proxies import db_session, current_repo
-from ..utils.posts import get_posts
+from ..utils.posts import get_posts, get_post_groups
 from ..models import Post, Tag, User, PageView
-from ..utils.requests import from_request_get_feed_params
+from ..utils.requests import from_request_get_feed_params, from_request_get_group_params
 from ..utils.render import render_post_tldr
 
 blueprint = Blueprint(
@@ -87,11 +87,21 @@ def render_feed():
     for post in posts:
         post.tldr = render_post_tldr(post)
 
-    return render_template("index-feed.html",
+    request_tag = request.args.get('tag')
+
+    group_params = from_request_get_group_params(request)
+    grouped_data = get_post_groups(group_params)
+
+    return render_template('index-feed.html',
                            feed_params=feed_params,
                            posts=posts,
                            post_stats=post_stats,
-                           top_header='Knowledge Feed')
+                           top_header='Knowledge Feed',
+                           grouped_data=grouped_data,
+                           filters=group_params['filters'],
+                           sort_by=group_params['sort_by'],
+                           group_by=group_params['group_by'],
+                           tag=request_tag)
 
 
 @blueprint.route('/table')
@@ -114,78 +124,17 @@ def render_table():
 @permissions.index_view.require()
 def render_cluster():
     """ Render the cluster view """
-    # we don't use the from_request_get_feed_params because some of the
-    # defaults are different
-    filters = request.args.get('filters', '')
-    sort_by = request.args.get('sort_by', 'alpha')
-    group_by = request.args.get('group_by', 'folder')
+
     request_tag = request.args.get('tag')
-    sort_desc = not bool(request.args.get('sort_asc', ''))
 
-    excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
-    post_query = (db_session.query(Post)
-                            .filter(Post.is_published)
-                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
-
-    if filters:
-        filter_set = filters.split(" ")
-        for elem in filter_set:
-            elem_regexp = "%," + elem + ",%"
-            post_query = post_query.filter(Post.keywords.like(elem_regexp))
-
-    if group_by == "author":
-        author_to_posts = {}
-        authors = (db_session.query(User).all())
-        for author in authors:
-            author_posts = [post for
-                            post in author.posts
-                            if post.is_published and not post.contains_excluded_tag]
-            if author_posts:
-                author_to_posts[author.format_name] = author_posts
-        tuples = [(k, v) for (k, v) in author_to_posts.items()]
-
-    elif group_by == "tags":
-        tags_to_posts = {}
-        all_tags = (db_session.query(Tag)
-                              .filter(~Tag.name.in_(excluded_tags))
-                              .all())
-
-        for tag in all_tags:
-            tag_posts = [post for
-                         post in tag.posts
-                         if post.is_published and not post.contains_excluded_tag]
-            if tag_posts:
-                tags_to_posts[tag.name] = tag_posts
-        tuples = [(k, v) for (k, v) in tags_to_posts.items()]
-
-    elif group_by == "folder":
-        posts = post_query.all()
-        # group by folder
-        folder_to_posts = {}
-
-        for post in posts:
-            folder = posixpath.dirname(post.path)
-            if folder in folder_to_posts:
-                folder_to_posts[folder].append(post)
-            else:
-                folder_to_posts[folder] = [post]
-
-        tuples = [(k, v) for (k, v) in folder_to_posts.items()]
-
-    else:
-        raise ValueError(u"Group by `{}` not understood.".format(group_by))
-
-    if sort_by == 'alpha':
-        grouped_data = sorted(tuples, key=lambda x: x[0])
-    else:
-        grouped_data = sorted(
-            tuples, key=lambda x: len(x[1]), reverse=sort_desc)
+    group_params = from_request_get_group_params(request)
+    grouped_data = get_post_groups(group_params)
 
     return render_template("index-cluster.html",
                            grouped_data=grouped_data,
-                           filters=filters,
-                           sort_by=sort_by,
-                           group_by=group_by,
+                           filters=group_params['filters'],
+                           sort_by=group_params['sort_by'],
+                           group_by=group_params['group_by'],
                            tag=request_tag)
 
 

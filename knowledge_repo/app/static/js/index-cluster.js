@@ -76,7 +76,7 @@ var indexClusterJx = (function(){
                            .replace('sort', '')
                            .toLowerCase();
     var filter_var = $('#searchbar').val();
-    var loc = '/cluster?group_by=' + cluster + '&sort_by=' + sort;
+    var loc = location.pathname + '?group_by=' + cluster + '&sort_by=' + sort;
     if (sort === "alpha") {
       loc += "&sort_asc=1";
     }

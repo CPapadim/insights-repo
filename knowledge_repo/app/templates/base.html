@@ -4,10 +4,11 @@
   <head>
     <meta charset="utf-8">
 
-    <title>{% block title %}Knowledge Repo{% endblock %}</title>
+    <title>{% block title %}INSIGHTS{% endblock %}</title>
 
     <!-- js includes at the top as post embedded js colliding -->
     <script src="{{ url_for('static', filename='modules/jquery/jquery.min.js')}}"></script>
+    <script src="{{ url_for('static', filename='modules/jquery/jquery.blockUI.js')}}"></script>
     <script src="{{ url_for('static', filename='modules/tether/js/tether.min.js')}}"></script>
     <script src="{{ url_for('static', filename='modules/bootstrap/js/bootstrap.min.js')}}"></script>
     <script src="{{ url_for('static', filename='modules/bootstrap-slider/js/bootstrap-slider.min.js')}}"></script>
@@ -54,6 +55,8 @@
 
   <body>
     {% block navbar %}
+    {% if request.args.get('on_page') != 'cluster' %}
+
     <!-- Top-level navbar -->
     <nav class="navbar navbar-fixed-top navbar-inverse">
       <div class="container-fluid">
@@ -72,7 +75,7 @@
             <!-- Brand name / logo -->
             <a class="navbar-brand" href="/" class="logo-image">
               <img src='{{ url_for("static", filename = "images/logo-white.svg")}}' />
-              <text>Knowledge Repo</text>
+              <text>INSIGHTS</text>
             </a>
           </div>
 
@@ -143,6 +146,7 @@
         </div>
       </div>
     </nav>
+    {% endif %}
     {% endblock %}
 
     <!-- Main content place holder, with a sidebar on both the left and right,
@@ -185,6 +189,10 @@
 
     <!-- Placeholder for additional ad-hoc scripts. -->
     {% block scripts %}
+      {% block base_scripts %}
+      {% endblock %}
+      {% block page_scripts %}
+      {% endblock %}
     {% endblock %}
 
   </body>

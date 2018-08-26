@@ -34,7 +34,134 @@
     </a>
 {% endmacro %}
 
+
+{% block outer_content %}
+{% endblock %}
+
+
 {% block inner_content %}
+  {% block content_filter_groups %}
+    <br><br>
+    <div class="row cluster-header">
+      <div class="col-md-12 cluster-header-wrapper">
+        <div class="col-md-3 group-by-options">
+          <div class="radio-inline radio-cluster">
+            <input type="radio" name="cluster-radio" id="clusterFolder">
+            <label for="clusterFolder">Projects</label>
+          </div><!-- Comment out whitespace between divs
+     //--><div class="radio-inline radio-cluster">
+            <input type="radio" name="cluster-radio" id="clusterTags">
+            <label for="clusterTags">Tags</label>
+          </div><!-- Comment out whitespace between divs
+     //--><div class="radio-inline radio-cluster">
+            <input type="radio" name="cluster-radio" id="clusterAuthor">
+            <label for="clusterAuthor">Author</label>
+          </div>
+        </div>
+        <div class="cluster-options">
+          {% if request.endpoint != 'index.render_cluster' %}
+          <div class="col-md-3 quickfilter">
+            <div class="quickfilter-header">Quick Filter:</div>
+            <input id="quickfilter-text">
+          </div>
+          {% endif %}
+          <div class="col-md-3 sort-by-options">
+            <div class="sort-by-header">Sort By:</div>
+            <div class="radio-inline radio-cluster cluster-sort">
+              <label>
+                <input type="radio" name="sort-radio" id="sortAlpha"> Alphabetically
+              </label>
+            </div>
+            <div class="radio-inline radio-cluster cluster-sort">
+              <label>
+                <input type="radio" name="sort-radio" id="sortCount">Count
+              </label>
+            </div>
+          </div>
+        </div>
+      <div style="clear:both"></div>
+      </div>
+    </div>
+  {% endblock %}
+
+    <div id="cluster_list" class="filter_scrollbar">
+    {% set post_paths = request.args.get('post_paths') %}
+    {% set authors = request.args.get('authors') %}
+    {% set tags = request.args.get('tags') %}
+
+    {% set groupby_arg = group_by %}
+    {% set sortby_arg = request.args.get('sort_by') %}
+    {% set sortasc_arg = request.args.get('sort_asc') %}
+
+    {% for cluster, content in grouped_data %}
+      {%- if groupby_arg == 'author' %}
+        {% set contents = content[0] %}
+        {% set author_id = content[1] %}
+      {%- else %}
+        {% set contents = content %}
+      {%- endif%}
+
+      {%- if contents|length > 0 and cluster|length > 0 %}
+      {% set cluster_id = cluster|replace('/', '__')|replace(' ', '__')|replace('-', '__') %}
+      {%- if groupby_arg == 'folder' %}
+        {% set cluster_name = cluster|replace('/', ' :: ')|replace('_', ' ')|replace('-', ' ')|title %}
+      {%- else%}
+        {% set cluster_name = cluster %}
+      {%- endif%}
+
+      {% if groupby_arg == 'folder' %}
+        {% set filter_arg = 'post_paths=' + cluster|urlencode %}
+      {% elif groupby_arg == 'author' %}
+        {% set filter_arg = 'authors=' + author_id %}
+      {% elif groupby_arg == 'tags' %}
+        {% set filter_arg = 'tags=' + cluster %}
+      {% endif %}
+
+      {% set url_args = '?' + filter_arg %}
+      {% if groupby_arg is not none %}
+        {%set url_args = url_args + '&group_by=' + groupby_arg %}
+      {% endif %}
+      {% if sortby_arg is not none %}
+        {%set url_args = url_args + '&sort_by=' + sortby_arg %}
+      {% endif %}
+      {% if sortasc_arg is not none %}
+        {%set url_args = url_args + '&sort_asc=' + sortasc_arg %}
+      {% endif %}
+
+      {% if (groupby_arg == 'folder') and post_paths and cluster and (cluster in post_paths.split(',')) %}
+        {% set selected_cluster = True %}
+      {% elif (groupby_arg == 'author') and authors and author_id and (author_id in authors.split(',')) %}
+        {% set selected_cluster = True %}
+      {% elif (groupby_arg == 'tags') and tags and cluster and (cluster in tags.split(',')) %}
+        {% set selected_cluster = True %}
+      {% else %}
+        {% set selected_cluster = False %}
+      {% endif %}
+      {% if selected_cluster %}
+      <a href="{{ url_for(request.endpoint) + url_args }}" class = "cluster_link selected_cluster_link">
+        <div id="{{ cluster_id|safe }}" class="cluster_card selected_cluster">
+      {% else %}
+      <a href="{{ url_for(request.endpoint) + url_args }}" class = "cluster_link">
+        <div id="{{ cluster_id|safe }}" class="cluster_card">
+      {% endif %}
+          <div class="cluster_name" style="margin-bottom:0"> {{ cluster_name }}</div>
+          <div class="cluster_details">{{ contents|length }} posts</div>
+        </div>
+      </a>
+      <div id="{{ cluster_id|safe }}-content" style="display:none">
+        <ul>
+        {% for item in contents %}
+          <li>
+            <a href="{{'/post/' + item.path|urlencode }}">
+              {{ item.title|replace('_', ' ')|title }}
+            </a>
+          </li>
+        {% endfor %}
+        </ul>
+       </div>
+      {%- endif%}
+    {% endfor %}
+    </div>
 
 <div id="feed-posts">
     {% for post in posts %}
@@ -63,34 +190,65 @@
     </div>
     {% endfor %}
 </div>
-
 {% endblock %}
 
 {% block scripts %}
-{{ super () }}
-<script src="{{ url_for('static', filename='js/pages/index-feed.js') }}"></script>
-<script src="{{ url_for('static', filename='js/helpers.js')}}" type='text/javascript'></script>
-<script src="{{ url_for('static', filename='js/tags.js')}}" type='text/javascript'></script>
-<script type="text/javascript">
+  {% block base_scripts %}
+  {{ super () }}
+  <script src="{{ url_for('static', filename='js/index-cluster.js') }}"></script>
+  <script type="text/javascript">
+  $(document).ready(function() {
 
-  $(".pop").popover({ trigger: "manual" , html: true, animation:false, delay: 100})
-    .on("mouseenter", function () {
-        var _this = this;
-        $(this).popover("show");
-        $(".popover").on("mouseleave", function () {
-            $(_this).popover('hide');
-        });
-    }).on("mouseleave", function () {
-        var _this = this;
-        setTimeout(function () {
-            if (!$(".popover:hover").length) {
-                $(_this).popover("hide");
-            }
-        }, 300);
-  });
+      var tag = "{{ tag |default('', true)}}";
+      var clusterSelected = '#cluster{{ group_by|title }}';
+      var sortSelected = '#sort{{ sort_by|title }}';
+      var clusterButtons = ["clusterFolder", "clusterTags", "clusterAuthor"];
+      var sortButtons = ["sortAlpha", "sortCount"];
+      indexClusterJx.addFoldingToGroups();
+      indexClusterJx.clickTag(tag);
+      clusterSelected = indexClusterJx.getClusterSelected(clusterSelected);
+      sortSelected = indexClusterJx.getSortSelected(sortSelected);
+      $(clusterSelected)[0].setAttribute("checked", "checked")
+      $(sortSelected)[0].setAttribute("checked", "checked")
+      indexClusterJx.formatButtons(clusterSelected, clusterButtons, sortSelected, sortButtons);
+
+      function search(){
+        indexClusterJx.refreshPage(clusterSelected, sortSelected);
+      }
+
+    })
+  </script>
+  {% endblock %}
+  {% block page_scripts %}
+  <script src="{{ url_for('static', filename='js/pages/index-feed.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/helpers.js')}}" type='text/javascript'></script>
+  <script src="{{ url_for('static', filename='js/tags.js')}}" type='text/javascript'></script>
+  <script type="text/javascript">
+
+    $(".pop").popover({ trigger: "manual" , html: true, animation:false, delay: 100})
+      .on("mouseenter", function () {
+          var _this = this;
+          $(this).popover("show");
+          $(".popover").on("mouseleave", function () {
+              $(_this).popover('hide');
+          });
+      }).on("mouseleave", function () {
+          var _this = this;
+          setTimeout(function () {
+              if (!$(".popover:hover").length) {
+                  $(_this).popover("hide");
+              }
+          }, 300);
+    });
 
 
-   $(document).ready(function(){
+    $(document).ready(function(){
+
+      $('.radio-cluster').click(function() { 
+        $('div#cluster_list').scrollLeft(0);
+        $('div#cluster_list').block({ message: null }); 
+        $('div#cluster_list').css("overflow-x", "hidden");
+      }); 
       // make the right button active
 
       var card_button = $(".btn-card")[0];
@@ -107,17 +265,60 @@
       var filters = "{{ feed_params['filters'] }}";
       {% endif %}
 
-    $(".next_btn").on("click", function(){
-      helpersJx.changePage(next_start, results, filters)
-    });
+      $(".next_btn").on("click", function(){
+        helpersJx.changePage(next_start, results, filters)
+      });
 
-    $(".prev_btn").on("click", function(){
-      helpersJx.changePage(prev_start, results, filters)
-    })
+      $(".prev_btn").on("click", function(){
+        helpersJx.changePage(prev_start, results, filters)
+      })
 
-    $(document.body).on('click',"button[id^=tag-subscription]",function () {
-      tagsJx.addTagSubscriptionListener($(this)[0]);
+      $(document.body).on('click',"button[id^=tag-subscription]",function () {
+        tagsJx.addTagSubscriptionListener($(this)[0]);
+      });
+
+      $('div#cluster_list').unblock({ message: null });
+      $('div#cluster_list').css("overflow-x","auto");
+
+
+
+      $('#quickfilter-text').keyup(function () {
+        var filter_array = new Array();
+        var filter = this.value.toLowerCase();  // no need to call jQuery here
+
+        filter_array = filter.split(' '); // split the user input at the spaces
+
+        var arrayLength = filter_array.length; // Get the length of the filter array
+
+        $('.cluster_card').each(function() {
+            /* cache a reference to the current .media (you're using it twice) */
+            var _this = $(this);
+            var title = _this.find('div.cluster_name').text().toLowerCase();
+
+            /* 
+                title and filter are normalized in lowerCase letters
+                for a case insensitive search
+             */
+
+            var hidden = 0; // Set a flag to see if a div was hidden
+
+            // Loop through all the words in the array and hide the div if found
+            for (var i = 0; i < arrayLength; i++) {
+                 if (title.indexOf(filter_array[i]) < 0) {
+                    _this.hide();
+                    hidden = 1;
+                }
+            }
+            // If the flag hasn't been tripped show the div
+            if (hidden == 0)  {
+               _this.show();
+            }
+        });
+      });
+
+      //Move selected clusters to first in the filters div
+      $(".selected_cluster_link").prependTo("#cluster_list")
     });
-  });
-</script>
+  </script>
+  {% endblock %}
 {% endblock %}
