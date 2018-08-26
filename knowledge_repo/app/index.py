@@ -20,7 +20,7 @@ UNLOCKED = '0'
 
 
 def set_up_indexing_timers(app):
-    if not app.config['INDEXING_ENABLED']:
+    if not app.config['INDEXING_ENABLED'] or app.config['MANUAL_INDEX']:
         return False
 
     if app.check_thread_support(check_index=True, check_repositories=app.config['INDEXING_UPDATES_REPOSITORIES']):

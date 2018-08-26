@@ -40,6 +40,7 @@ class IndexMetadata(db.Model):
 
     @classmethod
     def get(cls, type, name, default=None):
+        db.engine.dispose()
         m = db_session.query(IndexMetadata).filter(IndexMetadata.type == type).filter(IndexMetadata.name == name).first()
         if m is not None:
             return m.value
@@ -47,6 +48,7 @@ class IndexMetadata(db.Model):
 
     @classmethod
     def set(cls, type, name, value):
+        db.engine.dispose()
         m = db_session.query(IndexMetadata).filter(IndexMetadata.type == type).filter(IndexMetadata.name == name).first()
         if m is not None:
             m.value = value
@@ -57,6 +59,7 @@ class IndexMetadata(db.Model):
 
     @classmethod
     def get_last_update(cls, type, name):
+        db.engine.dispose()
         m = db_session.query(IndexMetadata).filter(IndexMetadata.type == type).filter(IndexMetadata.name == name).first()
         if m is not None:
             return m.updated_at
@@ -169,8 +172,6 @@ class PageView(db.Model):
             return getattr(self._route, attr)
 
         def __call__(self, *args, **kwargs):
-            if not current_app.config.get('INDEXING_ENABLED', True):
-                return self._route(*args, **kwargs)
 
             log = PageView(
                 page=request.full_path,

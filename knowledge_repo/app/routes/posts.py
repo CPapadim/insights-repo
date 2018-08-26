@@ -40,9 +40,6 @@ def render(path):
         # html = create_presentation_text(presentation_post)
         tmpl = "markdown-presentation.html"
 
-    if not current_app.config.get('INDEXING_ENABLED', True):
-        return _render_preview(path=path, tmpl=tmpl)
-
     post = (db_session.query(Post)
                       .filter(Post.path == path)
                       .first())
@@ -53,8 +50,12 @@ def render(path):
             post = (db_session.query(Post)
                               .filter(Post.path == knowledge_aliases[path])
                               .first())
+    # If post is None ...        
     if not post:
-        raise Exception(u"unable to find post at {}".format(path))
+        if not current_app.config.get('INDEXING_ENABLED', True): # ... and indexing is disabled...
+            return _render_preview(path=path, tmpl=tmpl) # try rendering in preview mode
+        else: # ...otherwise, raise exception that post wasn't found
+            raise Exception(u"unable to find post at {}".format(path))
 
     if post.contains_excluded_tag:
         # It's possible that someone gets a direct link to a post that has an excluded tag
@@ -136,6 +137,8 @@ def render_preview(path):
 def _render_preview(path, tmpl):
     post = None
     mode = request.args.get('render', 'html')
+    
+    username, user_id = current_user.identifier, current_user.id
 
     if current_repo.has_post(path):
         post = current_repo.post(path)
@@ -144,6 +147,10 @@ def _render_preview(path, tmpl):
         if path in knowledge_aliases:
             # TODO: reframe as redirect
             post = current_repo.post(knowledge_aliases[path])
+
+    # Only post authors or repo editors should be able to see preview
+    if not (username in post.headers['authors'] or username in current_repo.config.editors):
+        return render_template("error.html")
 
     if not post:
         raise Exception(u"unable to find post at {}".format(path))
