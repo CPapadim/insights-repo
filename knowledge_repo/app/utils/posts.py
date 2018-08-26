@@ -5,9 +5,10 @@ Functions include:
     - get_all_post_stats
 """
 import math
+import posixpath
 from builtins import str
 from flask import current_app
-from sqlalchemy import func, distinct, or_
+from sqlalchemy import func, distinct, or_, and_
 
 from ..proxies import db_session
 from ..models import (Comment, PageView, Post,
@@ -49,7 +50,20 @@ def get_posts(feed_params):
             query = query.filter(or_(func.lower(Post.keywords).like('%' + elem + '%'),
                                      func.lower(Post.keywords).like('%' + elem),
                                      func.lower(Post.keywords).like(elem + '%')))
+    
+    # filter out based on feed param post paths
+    post_paths = feed_params['post_paths']
+    if post_paths:
+        query = query.filter(or_(*[and_(Post.path.like(post_path + "/%"), 
+                                        ~Post.path.like(post_path + "/%/%")) for post_path in post_paths.split(",")]))
 
+    # filter out based on feed param tags
+    tags = feed_params['tags']
+    if tags:
+        tags = [tag for tag in tags.split(",")]
+        query = query.filter(Post.tags.any(Tag.name.in_(tags)))
+
+    # filter out based on feed param author names
     author_names = feed_params['authors']
     if author_names:
         author_names = [author_name.strip() for author_name in author_names.split(",")]
@@ -123,3 +137,72 @@ def get_posts(feed_params):
     db_session.expunge_all()
 
     return posts, post_stats
+
+
+def get_post_groups(group_params):
+
+    """ Group posts by the group_by field for Cluster and Filter views """
+    filters = group_params['filters']
+    sort_by = group_params['sort_by']
+    sort_desc = group_params['sort_desc']
+    group_by = group_params['group_by']
+
+    excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
+    post_query = (db_session.query(Post)
+                            .filter(Post.is_published)
+                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
+
+    if filters:
+        filter_set = filters.split(" ")
+        for elem in filter_set:
+            elem_regexp = "%," + elem + ",%"
+            post_query = post_query.filter(Post.keywords.like(elem_regexp))
+    if group_by == "author":
+        author_to_posts = {}
+        authors = (db_session.query(User).all())
+        for author in authors:
+            author_posts = [post for
+                            post in author.posts
+                            if post.is_published and not post.contains_excluded_tag]
+            if author_posts:
+                author_to_posts[author.format_name] = (author_posts, author.identifier)
+        tuples = [(k, v) for (k, v) in author_to_posts.items()]
+
+    elif group_by == "tags":
+        tags_to_posts = {}
+        all_tags = (db_session.query(Tag)
+                              .filter(~Tag.name.in_(excluded_tags))
+                              .all())
+
+        for tag in all_tags:
+            tag_posts = [post for
+                         post in tag.posts
+                         if post.is_published and not post.contains_excluded_tag]
+            if tag_posts:
+                tags_to_posts[tag.name] = tag_posts
+        tuples = [(k, v) for (k, v) in tags_to_posts.items()]
+
+    elif group_by == "folder":
+        f_posts = post_query.all()
+        # group by folder
+        folder_to_posts = {}
+
+        for f_post in f_posts:
+            folder = posixpath.dirname(f_post.path)
+            if folder in folder_to_posts:
+                folder_to_posts[folder].append(f_post)
+            else:
+                folder_to_posts[folder] = [f_post]
+
+        tuples = [(k, v) for (k, v) in folder_to_posts.items()]
+
+    else:
+        raise ValueError(u"Group by `{}` not understood.".format(group_by))
+
+    if sort_by == 'alpha':
+        grouped_data = sorted(tuples, key=lambda x: x[0])
+    else:
+        grouped_data = sorted(
+            tuples, key=lambda x: len(x[1]), reverse=sort_desc)
+
+    return grouped_data

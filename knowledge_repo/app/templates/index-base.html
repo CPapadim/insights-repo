@@ -41,9 +41,14 @@
   {% endif %}
 {% endmacro %}
 
+
 {% block content %}
+  <!-- Container for outer content items -->
+  {% block outer_content %}
+  {% endblock %}
   <!-- Index rendering mode switch -->
   <div class="row">
+
     <div class="col-md-5">
       <div class="btn-group btn-group-justified index-view-btn-group" role="group">
         <a href="/feed" class="btn btn-default btn-card no-underline" role="button">
