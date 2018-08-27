@@ -105,7 +105,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
     post_id = db.Column(db.Integer)
-    text = db.Column(db.Text)
+    text = db.Column(db.Text(4294000000))
     type = db.Column(db.String(100), default='post')
     created_at = db.Column(db.DateTime, default=func.now())
     updated_at = db.Column(db.DateTime, default=func.now(), onupdate=func.now())
@@ -118,7 +118,7 @@ class ErrorLog(db.Model):
     function = db.Column(db.String(100))
     location = db.Column(db.String(255))
     message = db.Column(db.Text())
-    traceback = db.Column(db.Text())
+    traceback = db.Column(db.Text(4294000000))
     version = db.Column(db.String(100), default=__version__)
     created_at = db.Column(db.DateTime, default=func.now())
 
@@ -369,9 +369,9 @@ class Post(db.Model):
     revision = db.Column(db.Integer())
 
     title = db.Column(db.Text())
-    tldr = db.Column(db.Text)
+    tldr = db.Column(db.Text(4294000000))
     keywords = db.Column(db.Text)
-    thumbnail = db.Column(db.Text())
+    thumbnail = db.Column(db.Text(4294000000))
 
     private = db.Column(db.Integer())
 
@@ -633,7 +633,7 @@ class Email(db.Model):
     object_type = db.Column(db.String(100))
     sent_at = db.Column(db.DateTime, default=func.now())
     subject = db.Column(db.Text)
-    text = db.Column(db.Text)
+    text = db.Column(db.Text(4294000000))
 
 
 @unique_constructor(
